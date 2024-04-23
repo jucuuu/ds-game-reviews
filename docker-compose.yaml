@@ -1,0 +1,33 @@
+version: '3.9'
+services:
+  node:
+    build: 
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: node-container
+    ports:
+      - 3000:3000
+    volumes:
+      - ./server:/app
+      - /app/node_modules
+  react:
+    build: 
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: react-container
+    ports:
+     - 3001:3001
+    stdin_open: true
+  db:
+    image: postgres
+    restart: always
+    environment:
+      PGDATA: /var/lib/postgresql/data/pgdata/
+      POSTGRES_PASSWORD: password
+      POSTGRES_USER: postgres
+      POSTGRES_DB: dsolgames
+    ports:
+     - 5432:5432
+    volumes:
+     - ./server/database.sql:/docker-entrypoint-initdb.d/database.sql
+     - ./server/pgdata:/var/lib/postgresql/pgdata
