@@ -12,7 +12,7 @@ client.connect();
 
 const getGames = async () => {
     try {
-        return await new Promise(function (resolve, reject) { // queries rank based on global sales
+        return await new Promise(function (resolve, reject) { // rank queried based on global sales
             client.query(`select id, RANK () OVER (ORDER BY global_sales DESC) as rank, name, platform, year, genre, publisher,
             na_sales, eu_sales, jp_sales, other_sales, global_sales, COALESCE(p.review_count, 0) as review_count from games
             left join (select app_name, count(*) as review_count from reviews
@@ -55,21 +55,23 @@ const updateGame = (id, body) => {
             if (res && res.rows) {
                 resolve(`Game updated: ${JSON.stringify(res.rows[0])}`);
             } else {
-                reject(new Error("No results found"));
+                reject(new Error("No results"));
             }
         });
     });
 };
 
-// const deleteGame = (id) => {
-//     return new Promise(function (resolve, reject) {
-//         client.query(`DELETE FROM games WHERE id = $1`, [id],
-//         (err, res) => {
-//             if (err) reject(err);
-//             resolve(`Game deleted with ID: ${id}`);
-//         });
-//     });
-// };
+const deleteGame = (id) => {
+    return new Promise(function (resolve, reject) {
+        client.query(`DELETE FROM games WHERE id = $1`, [id],
+        (err, res) => {
+            if (err) reject(err);
+            resolve(`Game deleted with ID: ${id}`);
+        });
+    });
+};
+
+// REVIEWS
 
 const getReviews = async (id) => {
     try {
@@ -78,7 +80,7 @@ const getReviews = async (id) => {
             {
                 if (err) reject(err);
                 if (res && res.rows) resolve(res.rows);
-                else reject(new Error("No results found"));
+                else reject(new Error("No results"));
             });
         });
     } catch (err1) {
@@ -86,22 +88,22 @@ const getReviews = async (id) => {
     }
 };
 
-const createReview = (form) => {
+const createReview = (body) => {
     return new Promise(function (resolve, reject) {
-        const { app_id, app_name, review_text, review_score } = form;
+        const { app_id, app_name, review_text, review_score } = body;
         client.query(`INSERT INTO reviews VALUES ($1, $2, $3, $4, 0) RETURNING *`,
         [app_id, app_name, review_text, review_score],
         (err, res) => {
             if (err) reject(err);
             if (res && res.rows) resolve(res.rows);
-            else reject(new Error("No results found"));
+            else reject(new Error("No results"));
         });
     });
 };
 
-const updateReview = (id, form) => {
+const updateReview = (id, body) => {
     return new Promise(function (resolve, reject) {
-        const { review_text, review_score } = form;
+        const { review_text, review_score } = body;
         client.query(`
             UPDATE reviews SET review_text = $1, review_score = $2 WHERE id = $3 RETURNING *`,
         [review_text, review_score, id],
@@ -110,7 +112,7 @@ const updateReview = (id, form) => {
             if (res && res.rows) {
                 resolve(`Review updated: ${JSON.stringify(res.rows[0])}`);
             } else {
-                reject(new Error("No results found"));
+                reject(new Error("No results"));
             }
         });
     });

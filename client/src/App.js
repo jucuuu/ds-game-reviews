@@ -20,6 +20,19 @@ function App() {
 
   const [form] = Form.useForm();
 
+  // Modal for game card
+  // const [isCardModalOpen, setIsCardModalOpen] = useState(false);
+  // const [cardData, setCardData] = useState([]);
+  // const showCardModal = () => {
+  //   setIsCardModalOpen(true);
+  // };
+  // const handleCardCancel = () => {
+  //   setIsCardModalOpen(false);
+  // };
+  // const showCard = (data) => {
+  //   setCardData(data);
+  // };
+
   // Send new game data to server
   const handleFinish = async (values) => {
     setIsModalOpen(false);
@@ -49,36 +62,6 @@ function App() {
   useEffect(() => {
     getGames();
   }, [gameData]);
-
-  // Game create form state
-  const [formData, setFormData] = useState({
-    name: '',
-    platform: '',
-    year: 0,
-    genre: '',
-    publisher: '',
-    na_sales: 0,
-    eu_sales: 0,
-    jp_sales: 0,
-    other_sales: 0
-  });
-
-  function updateGame(id) {
-    fetch(`http://localhost:3000/games/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({}),
-    })
-      .then(response => {
-        return response.json();
-      })
-      .then(data => {
-        alert(data);
-        getGames();
-      });
-  }
 
   const columns = [
     {
@@ -177,49 +160,28 @@ function App() {
     }
   ].filter(item => !item.hidden);
 
-  const handleInput = (e) => {
-    const {name, value} = e.target;
-    setFormData((oldFormData) => ({
-      ...oldFormData,
-      [name]: value,
-    }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    fetch('http://localhost:3000/games', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({formData}),
-    })
-      .then(response => {
-        return response.text();
-      })
-      .then(data => {
-        alert(data);
-        getGames();
-      });
-  };
-
   return (
     <div className="App">
       <Layout>
 
         <Layout>
           <Content>
-            <Table dataSource={gameData} columns={columns}/>
+            <Table dataSource={gameData} columns={columns} />
           </Content>
           
           <Sider style={{ background: 'white' }}>
-            <Button block type="primary" onClick={showModal}>Add a game</Button>
+            <Button block onClick={showModal}>Add a game</Button>
           </Sider>
         </Layout>
 
       </Layout>
 
-      <Modal title="Input new game data" open={isModalOpen} onOk={handleOk} onCancel={handleCancel} okButtonProps={{ style: { display: 'none' } }} footer={[<Button key="cancel" type="primary" onClick={handleCancel}>
+      {/* Game card modal */}
+      {/* <GameCard /> */}
+        
+      {/* Game creation form modal */}
+      <Modal title="Input new game data" open={isModalOpen} onOk={handleOk} onCancel={handleCancel} okButtonProps={{ style: { display: 'none' } }} footer={[
+        <Button key="cancel" type="primary" onClick={handleCancel}>
             Cancel
         </Button>,
         <Button form="form" key="submit" htmlType="submit" onClick={() => form.submit()}>
