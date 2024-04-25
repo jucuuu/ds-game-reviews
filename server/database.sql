@@ -26,4 +26,4 @@ CREATE TABLE reviews(
 
 \COPY reviews(app_id, app_name, review_text, review_score, review_votes) FROM '/var/lib/postgresql/pgdata/dataset.csv' with DELIMITER ',' QUOTE '"' CSV HEADER null as 'N/A';
 
-delete from reviews where app_name like '';
+delete from reviews where app_name like '' or review_text like '';

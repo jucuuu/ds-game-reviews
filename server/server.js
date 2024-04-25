@@ -14,14 +14,54 @@ app.use(function (req, res, next) {
 app.use(cors());
 app.use(express.json());
 
+// Game CRU(bez d)
 app.get('/', async (req, res) => {
     data.getGames().then(response => {
       res.status(200).send(response);
     }).catch(error => {
       res.status(500).send(error);
     })
+});
+
+app.post('/games', (req, res) => {
+  data.createGame(req.body)
+  .then(response => {
+    res.status(200).send(response);
+  }).catch(error => {
+    res.status(500).send(error);
   })
+});
+
+// app.delete('/games/:id', (req, res) => {
+//   data.deleteGame(req.params.id)
+//   .then(response => {
+//     res.status(200).send(response);
+//   }).catch(error => {
+//     res.status(500).send(error);
+//   })
+// });
+
+app.put('/games/:id', (req, res) => {
+  const id = req.params.id;
+  const form = req.body;
+  data.updateGame(id, form)
+  .then(response => {
+    res.status(200).send(response);
+  }).catch(error => {
+    res.status(500).send(error);
+  })
+});
+
+// Review CRUD
+app.get('/games/:id', async (req, res) => {
+  data.getReviews(req.params.name).then(response => {
+    res.status(200).send(response);
+  }).catch(error => {
+    res.status(500).send(error);
+  })
+});
+
 
 app.listen(3000, () => {
     console.log(`Server is running on port 3000.`);
-})
+});
