@@ -22,8 +22,20 @@ CREATE TABLE reviews(
     review_votes BOOLEAN
 );
 
-\COPY games(rank, name, platform, year, genre, publisher, na_sales, eu_sales, jp_sales, other_sales, global_sales) FROM '/var/lib/postgresql/pgdata/vgsales.csv' with DELIMITER ',' QUOTE '"' CSV HEADER null as 'N/A';
+-- CREATE TABLE platforms(
+--     id SERIAL,
+--     name varchar(50)
+-- );
 
-\COPY reviews(app_id, app_name, review_text, review_score, review_votes) FROM '/var/lib/postgresql/pgdata/dataset.csv' with DELIMITER ',' QUOTE '"' CSV HEADER null as 'N/A';
+-- CREATE TABLE games_platforms(
+--     id SERIAL,
+-- );
 
-delete from reviews where app_name like '' or review_text like '';
+-- \COPY games(rank, name, platform, year, genre, publisher, na_sales, eu_sales, jp_sales, other_sales, global_sales) FROM '/var/lib/postgresql/pgdata/vgsales.csv' with DELIMITER ',' QUOTE '"' CSV HEADER null as 'N/A';
+
+-- \COPY reviews(app_id, app_name, review_text, review_score, review_votes) FROM '/var/lib/postgresql/pgdata/dataset.csv' with DELIMITER ',' QUOTE '"' CSV HEADER null as 'N/A';
+
+-- delete from reviews where app_name like '' or review_text like '';
+
+-- FK reviewos + import.js (speeles saglabaat, tad piesaistiit revjuviem speeles)
+-- UN visas platformas vienai speelei kopaa saliktas

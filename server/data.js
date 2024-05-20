@@ -10,13 +10,17 @@ const client = new Client({
 
 client.connect();
 
-const getGames = async () => {
+// !!! + passo filtrus+sorterus+pagination
+const getGames = async (params) => {
+    const { page, size } = params;
+
     try {
         return await new Promise(function (resolve, reject) { // rank queried based on global sales
             client.query(`select id, RANK () OVER (ORDER BY global_sales DESC) as rank, name, platform, year, genre, publisher,
             na_sales, eu_sales, jp_sales, other_sales, global_sales, COALESCE(p.review_count, 0) as review_count from games
             left join (select app_name, count(*) as review_count from reviews
-            group by app_name) as p on p.app_name = games.name`, (err, res) =>
+            group by app_name) as p on p.app_name = games.name
+            limit $1 offset $2`, [size, (page-1)*size], (err, res) =>
             {
                 if (err) reject(err);
                 if (res && res.rows) resolve(res.rows);
@@ -30,6 +34,12 @@ const getGames = async () => {
 
 const createGame = async (body) => {
     const { name, platform, year, genre, publisher, na_sales, eu_sales, jp_sales, other_sales } = body;
+    
+    // backend validaacija datiem
+    if (name.length < 3 || platform.length < 3 || publisher.length < 3 || genre.length < 3 || year < 0 || na_sales < 0 || eu_sales < 0 || jp_sales < 0 || other_sales < 0) {
+        console.log("Error"); // te normali jaizdara
+        return;
+    }
 
     try {
         const result = await client.query(`INSERT INTO games(rank, name, platform, year, genre, publisher, na_sales, eu_sales, jp_sales, other_sales, global_sales) VALUES (0, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,

@@ -1,9 +1,11 @@
 import './App.css';
 import React, { useState, useEffect } from 'react';
-import { Table, Layout, Button, Modal, Form } from 'antd';
+import { Table, Layout, Button, Modal, Form, Input } from 'antd';
 import { CreateGameForm } from './ui/CreateGameForm';
-
-const { Sider, Content } = Layout;
+import { CloseOutlined } from '@ant-design/icons';
+import { GameCard } from './ui/GameCard';
+ 
+const { Header, Content } = Layout;
 
 function App() {
   // Modal for game creation form
@@ -21,17 +23,18 @@ function App() {
   const [form] = Form.useForm();
 
   // Modal for game card
-  // const [isCardModalOpen, setIsCardModalOpen] = useState(false);
-  // const [cardData, setCardData] = useState([]);
-  // const showCardModal = () => {
-  //   setIsCardModalOpen(true);
-  // };
-  // const handleCardCancel = () => {
-  //   setIsCardModalOpen(false);
-  // };
-  // const showCard = (data) => {
-  //   setCardData(data);
-  // };
+  const [isCardModalOpen, setIsCardModalOpen] = useState(false);
+  const [cardData, setCardData] = useState([]);
+  const showCardModal = () => {
+    setIsCardModalOpen(true);
+  };
+  const handleCardCancel = () => {
+    setIsCardModalOpen(false);
+  };
+  const showCard = (data) => {
+    setCardData(data);
+    showCardModal();
+  };
 
   // Send new game data to server
   const handleFinish = async (values) => {
@@ -47,21 +50,33 @@ function App() {
       const data = await response.json();
       console.log(data);
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error: ', error);
     }
   };
 
   // Load all games from postgres
   const [gameData, setGameData] = useState(null);
-  const getGames = async () => {
-      const response = await fetch('http://localhost:3000/');
-      const newData = await response.json();
-      setGameData(newData);
-  };
+  // const getGames = async () => {
+  //     const response = await fetch('http://localhost:3000/');
+  //     const newData = await response.json();
+  //     setGameData(newData);
+  // };
+
+  // Load all games (+page limit) - JAPABEIDZ
+  const getGames = async(params) => {
+    const response = await fetch('http://localhost:3000/');
+  }
+
+  // Delete game - JAPABEIDZ
+  function deleteGame(id) {
+    fetch(`http://localhost:3000/games/${id}`, {
+      method: 'DELETE',
+    })
+  }
 
   useEffect(() => {
     getGames();
-  }, [gameData]);
+  }, []); // + filtri/sorteri/pagination
 
   const columns = [
     {
@@ -157,6 +172,14 @@ function App() {
       dataIndex: 'review_count',
       key: 'review_count',
       sorter: (a, b) => a.review_count - b.review_count
+    },
+    {
+      title: 'Delete',
+      dataIndex: 'delete',
+      key: 'delete',
+      render: (_, record) => (
+        <Button onClick={() => deleteGame(record.id)}><CloseOutlined /></Button>
+      )
     }
   ].filter(item => !item.hidden);
 
@@ -165,13 +188,20 @@ function App() {
       <Layout>
 
         <Layout>
-          <Content>
-            <Table dataSource={gameData} columns={columns} />
-          </Content>
+          <Header style={{ background: 'white' }}>
+            <Button onClick={showModal}>Add a game</Button>
+            <Input placeholder="Search" /> {/* a kur ir */}
+          </Header>
           
-          <Sider style={{ background: 'white' }}>
-            <Button block onClick={showModal}>Add a game</Button>
-          </Sider>
+          <Content>
+            <Table dataSource={gameData} columns={columns}   onRow={(record, rowIndex) => {
+              return {
+                onClick: (event) => {
+                  showCard(record);
+                }
+              };
+            }}/>
+          </Content>
         </Layout>
 
       </Layout>
@@ -181,10 +211,10 @@ function App() {
         
       {/* Game creation form modal */}
       <Modal title="Input new game data" open={isModalOpen} onOk={handleOk} onCancel={handleCancel} okButtonProps={{ style: { display: 'none' } }} footer={[
-        <Button key="cancel" type="primary" onClick={handleCancel}>
-            Cancel
-        </Button>,
-        <Button form="form" key="submit" htmlType="submit" onClick={() => form.submit()}>
+        // <Button key="cancel" onClick={handleCancel}>
+        //     Cancel
+        // </Button>,
+        <Button form="form" key="submit" htmlType="submit" type="primary" onClick={() => form.submit()}>
             Submit
         </Button>
         ]}>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Card, Table, Statistic, Modal } from "antd";
 
-export default async function GameCard(record) {
+export const GameCard = (record, isopen) => {
     // get reviews for the game
     const [reviewData, setReviewData] = useState(null);
 
