@@ -1,8 +1,8 @@
 CREATE TABLE games(
-    id SERIAL,
+    id SERIAL PRIMARY KEY,
     rank INT,
     name VARCHAR(255),
-    platform VARCHAR(50),
+    platform VARCHAR(100),
     year INT,
     genre VARCHAR(50),
     publisher VARCHAR(50),
@@ -14,8 +14,8 @@ CREATE TABLE games(
 );
 
 CREATE TABLE reviews(
-    id SERIAL,
-    app_id INT,
+    id SERIAL PRIMARY KEY,
+    app_id INT REFERENCES games(id),
     app_name VARCHAR(255),
     review_text VARCHAR(9000),
     review_score INT,
@@ -36,6 +36,3 @@ CREATE TABLE reviews(
 -- \COPY reviews(app_id, app_name, review_text, review_score, review_votes) FROM '/var/lib/postgresql/pgdata/dataset.csv' with DELIMITER ',' QUOTE '"' CSV HEADER null as 'N/A';
 
 -- delete from reviews where app_name like '' or review_text like '';
-
--- FK reviewos + import.js (speeles saglabaat, tad piesaistiit revjuviem speeles)
--- UN visas platformas vienai speelei kopaa saliktas

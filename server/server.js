@@ -17,7 +17,7 @@ app.use(express.json());
 
 // Game CRUD
 app.get('/', async (req, res) => {
-    data.getGames().then(response => {
+    data.getGames(req.body).then(response => {
       res.status(200).send(response);
     }).catch(error => {
       res.status(500).send(error);

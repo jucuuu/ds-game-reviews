@@ -10,18 +10,17 @@ const client = new Client({
 
 client.connect();
 
-// !!! + passo filtrus+sorterus+pagination
-const getGames = async (params) => {
-    const { page, size } = params;
+// !!! + jaapasso filtri+sorteri+pagination
+const getGames = async (body) => {
+    const { page, pageSize } = body;
 
     try {
         return await new Promise(function (resolve, reject) { // rank queried based on global sales
             client.query(`select id, RANK () OVER (ORDER BY global_sales DESC) as rank, name, platform, year, genre, publisher,
             na_sales, eu_sales, jp_sales, other_sales, global_sales, COALESCE(p.review_count, 0) as review_count from games
             left join (select app_name, count(*) as review_count from reviews
-            group by app_name) as p on p.app_name = games.name
-            limit $1 offset $2`, [size, (page-1)*size], (err, res) =>
-            {
+            group by app_name) as p on p.app_name = games.name`, (err, res) =>
+            { // order by nestrada jebkuraa gadijumaa
                 if (err) reject(err);
                 if (res && res.rows) resolve(res.rows);
                 else reject(new Error("No results found"));

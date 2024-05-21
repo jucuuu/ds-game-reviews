@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { Table, Layout, Button, Modal, Form, Input } from 'antd';
 import { CreateGameForm } from './ui/CreateGameForm';
 import { CloseOutlined } from '@ant-design/icons';
-import { GameCard } from './ui/GameCard';
  
 const { Header, Content } = Layout;
 
@@ -57,14 +56,30 @@ function App() {
   // Load all games from postgres
   const [gameData, setGameData] = useState(null);
   // const getGames = async () => {
-  //     const response = await fetch('http://localhost:3000/');
-  //     const newData = await response.json();
-  //     setGameData(newData);
+  //     fetch('http://localhost:3000/')
+  //     .then(response => {
+  //       return response.json();
+  //     })
+  //     .then(data => {
+  //       setGameData(data);
+  //     });
   // };
 
   // Load all games (+page limit) - JAPABEIDZ
-  const getGames = async(params) => {
-    const response = await fetch('http://localhost:3000/');
+  const getGames = async(values) => {
+    try {
+      const response = await fetch('http://localhost:3000/', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(values),
+      });
+      const newData = await response.json();
+      setGameData(newData);
+    } catch (error) {
+      console.log('Nekaa');
+    }
   }
 
   // Delete game - JAPABEIDZ
@@ -89,89 +104,96 @@ function App() {
       title: 'Rank',
       dataIndex: 'rank',
       key: 'rank',
-      sorter: (a, b) => a.rank - b.rank,
+      // sorter: (a, b) => a.rank - b.rank,
+      onHeaderCell: (column) => {
+        return {
+          onClick: () => {
+            getGames([1, 10, 'rank']);
+          }
+        };
+      }
     },
     {
       title: 'Name',
       dataIndex: 'name',
       key: 'name',
-      sorter: (a, b) => {
-        a = a.name || '';
-        b = b.name || '';
-        return a.localeCompare(b);
-      }
+      // sorter: (a, b) => {
+      //   a = a.name || '';
+      //   b = b.name || '';
+      //   return a.localeCompare(b);
+      // }
     },
     {
       title: 'Platform',
       dataIndex: 'platform',
       key: 'platform',
-      sorter: (a, b) => {
-        a = a.platform || '';
-        b = b.platform || '';
-        return a.localeCompare(b);
-      }
+      // sorter: (a, b) => {
+      //   a = a.platform || '';
+      //   b = b.platform || '';
+      //   return a.localeCompare(b);
+      // }
     },
     {
       title: 'Year',
       dataIndex: 'year',
       key: 'year',
-      sorter: (a, b) => a.year - b.year
+      //sorter: (a, b) => a.year - b.year
     },
     {
       title: 'Genre',
       dataIndex: 'genre',
       key: 'genre',
-      sorter: (a, b) => {
-        a = a.genre || '';
-        b = b.genre || '';
-        return a.localeCompare(b);
-      }
+      // sorter: (a, b) => {
+      //   a = a.genre || '';
+      //   b = b.genre || '';
+      //   return a.localeCompare(b);
+      // }
     },
     {
       title: 'Publisher',
       dataIndex: 'publisher',
       key: 'publisher',
-      sorter: (a, b) => {
-        a = a.publisher || '';
-        b = b.publisher || '';
-        return a.localeCompare(b);
-      }
+      // sorter: (a, b) => {
+      //   a = a.publisher || '';
+      //   b = b.publisher || '';
+      //   return a.localeCompare(b);
+      // }
     },
     {
       title: 'NA sales',
       dataIndex: 'na_sales',
       key: 'na_sales',
-      sorter: (a, b) => a.na_sales - b.na_sales
+      //sorter: (a, b) => a.na_sales - b.na_sales
     },
     {
       title: 'EU sales',
       dataIndex: 'eu_sales',
       key: 'eu_sales',
-      sorter: (a, b) => a.eu_sales - b.eu_sales
+      //sorter: (a, b) => a.eu_sales - b.eu_sales
     },
     {
       title: 'JP sales',
       dataIndex: 'jp_sales',
       key: 'jp_sales',
-      sorter: (a, b) => a.jp_sales - b.jp_sales
+      //sorter: (a, b) => a.jp_sales - b.jp_sales
     },
     {
       title: 'Other sales',
       dataIndex: 'other_sales',
       key: 'other_sales',
-      sorter: (a, b) => a.other_sales - b.other_sales
+      //sorter: (a, b) => a.other_sales - b.other_sales
     },
     {
       title: 'Global sales',
       dataIndex: 'global_sales',
       key: 'global_sales',
-      sorter: (a, b) => a.global_sales - b.global_sales
+      //sorter: (a, b) => a.global_sales - b.global_sales
     },
     {
       title: 'Review count',
       dataIndex: 'review_count',
       key: 'review_count',
-      sorter: (a, b) => a.review_count - b.review_count
+      //sorter: (a, b) => a.review_count - b.review_count
     },
     {
       title: 'Delete',
@@ -188,19 +210,13 @@ function App() {
       <Layout>
 
         <Layout>
-          <Header style={{ background: 'white' }}>
+          <Header style={{ background: 'white', display: 'flex', alignItems: 'center'}}>
             <Button onClick={showModal}>Add a game</Button>
-            <Input placeholder="Search" /> {/* a kur ir */}
+            <Input placeholder="Search titles, platforms or genres" /> {/* a kur ir */}
           </Header>
           
           <Content>
-            <Table dataSource={gameData} columns={columns}   onRow={(record, rowIndex) => {
-              return {
-                onClick: (event) => {
-                  showCard(record);
-                }
-              };
-            }}/>
+            <Table dataSource={gameData} columns={columns} pagination={{onChange: (page, pageSize) => getGames([page, pageSize])}}/>
           </Content>
         </Layout>
 
