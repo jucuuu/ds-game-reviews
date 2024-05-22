@@ -16,12 +16,29 @@ app.use(cors());
 app.use(express.json());
 
 // Game CRUD
-app.get('/', async (req, res) => {
-    data.getGames(req.body).then(response => {
-      res.status(200).send(response);
-    }).catch(error => {
-      res.status(500).send(error);
-    })
+
+// app.get('/', async (req, res) => {
+//     data.getGames(req.params.page, req.params.pageSize).then(response => {
+//       res.status(200).send(response);
+//     }).catch(error => {
+//       res.status(500).send(error);
+//     })
+// });
+
+app.get('/:page&:pageSize&:sortColumn&:asc', async (req, res) => {
+  data.getGames(req.params.page, req.params.pageSize, req.params.sortColumn, req.params.asc).then(response => {
+    res.status(200).send(response);
+  }).catch(error => {
+    res.status(500).send(error);
+  })
+});
+
+app.get('/total', async (req, res) => {
+  data.getGameRowCount().then(response => {
+    res.status(200).send(response);
+  }).catch(error => {
+    res.status(500).send(error);
+  })
 });
 
 app.post('/games', (req, res) => {

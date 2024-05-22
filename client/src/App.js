@@ -2,11 +2,18 @@ import './App.css';
 import React, { useState, useEffect } from 'react';
 import { Table, Layout, Button, Modal, Form, Input } from 'antd';
 import { CreateGameForm } from './ui/CreateGameForm';
-import { CloseOutlined } from '@ant-design/icons';
- 
+import { CloseOutlined, DownOutlined, UpOutlined } from '@ant-design/icons';
 const { Header, Content } = Layout;
 
+
 function App() {
+  // pagination
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [currentPageSize, setCurrentPageSize] = React.useState(10);
+  const [totalRows, setTotalRows] = React.useState(50);
+  const [ascSort, setAscSort] = React.useState(false);
+  const [filter, setFilter] = React.useState('rank');
+
   // Modal for game creation form
   const [isModalOpen, setIsModalOpen] = useState(false);
   const showModal = () => {
@@ -21,7 +28,7 @@ function App() {
 
   const [form] = Form.useForm();
 
-  // Modal for game card
+  // Modal for game card (ja tads bus atp)
   const [isCardModalOpen, setIsCardModalOpen] = useState(false);
   const [cardData, setCardData] = useState([]);
   const showCardModal = () => {
@@ -47,7 +54,6 @@ function App() {
         body: JSON.stringify(values),
       });
       const data = await response.json();
-      console.log(data);
     } catch (error) {
       console.error('Error: ', error);
     }
@@ -65,22 +71,49 @@ function App() {
   //     });
   // };
 
-  // Load all games (+page limit) - JAPABEIDZ
-  const getGames = async(values) => {
+  // Load all games (+limit/offset)
+
+  const getGames = async(page, pageSize, sortColumn='rank', asc=true) => {
+    console.log('getGames: ', sortColumn, asc)
     try {
-      const response = await fetch('http://localhost:3000/', {
+      const response = await fetch(`http://localhost:3000/${page}&${pageSize}&${sortColumn}&${asc}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(values),
+        }
       });
       const newData = await response.json();
       setGameData(newData);
     } catch (error) {
-      console.log('Nekaa');
+      console.log('Error: ', error);
     }
   }
+
+  const getRowCount = async() => {
+    try {
+      fetch('http://localhost:3000/total')
+          .then(response => {
+            return response.json();
+          })
+          .then(data => {
+            console.log(data[0]["count"]);
+            setTotalRows(data[0]["count"]);
+          });
+    } catch (error) {
+      console.log('Error: ', error);
+    }
+  }
+
+  // const getGames = async (page, pageSize) => {
+  //   try {
+  //     const response = await fetch(`http://localhost:3000/`);
+  //     const games = await response.json();
+  //     console.log(games)
+  //     setGameData(games);
+  //   } catch (error) {
+  //     console.log(error);
+  //   }
+  // };
 
   // Delete game - JAPABEIDZ
   function deleteGame(id) {
@@ -90,9 +123,11 @@ function App() {
   }
 
   useEffect(() => {
-    getGames();
+    getRowCount();
+    getGames(currentPage, currentPageSize, filter, ascSort);
   }, []); // + filtri/sorteri/pagination
 
+  // onHeaderClick sorting
   const columns = [
     {
       title: 'ID',
@@ -104,14 +139,6 @@ function App() {
       title: 'Rank',
       dataIndex: 'rank',
       key: 'rank',
-      // sorter: (a, b) => a.rank - b.rank,
-      onHeaderCell: (column) => {
-        return {
-          onClick: () => {
-            getGames([1, 10, 'rank']);
-          }
-        };
-      }
     },
     {
       title: 'Name',
@@ -122,6 +149,15 @@ function App() {
       //   b = b.name || '';
       //   return a.localeCompare(b);
       // }
+      onHeaderCell: (column) => ({
+        onClick: () => {
+          // setState async !!!!! (a kaa filtreet...)
+          setFilter(column["key"]);
+          var as = ascSort;
+          getGames(currentPage, currentPageSize, column["key"], as);
+          (ascSort == true ? setAscSort(false) : setAscSort(true))
+        }, // click header row
+      })
     },
     {
       title: 'Platform',
@@ -216,7 +252,13 @@ function App() {
           </Header>
           
           <Content>
-            <Table dataSource={gameData} columns={columns} pagination={{onChange: (page, pageSize) => getGames([page, pageSize])}}/>
+            <Table dataSource={gameData} columns={columns} pagination={{total:totalRows, showSizeChanger:true, onChange: (page, pageSize) => {
+              getRowCount();
+              setCurrentPage(page);
+              setCurrentPageSize(pageSize);
+
+              getGames(page, pageSize, filter, ascSort);
+            }}}/>
           </Content>
         </Layout>
 

@@ -11,16 +11,17 @@ const client = new Client({
 client.connect();
 
 // !!! + jaapasso filtri+sorteri+pagination
-const getGames = async (body) => {
-    const { page, pageSize } = body;
-
+// page, pageSize, sortColumn, asc(1/0), search
+// filtret + sortot pec vairakiem parametriem
+const getGames = async (page, pageSize, sortColumn='rank', asc=true) => {
     try {
         return await new Promise(function (resolve, reject) { // rank queried based on global sales
             client.query(`select id, RANK () OVER (ORDER BY global_sales DESC) as rank, name, platform, year, genre, publisher,
             na_sales, eu_sales, jp_sales, other_sales, global_sales, COALESCE(p.review_count, 0) as review_count from games
             left join (select app_name, count(*) as review_count from reviews
-            group by app_name) as p on p.app_name = games.name`, (err, res) =>
-            { // order by nestrada jebkuraa gadijumaa
+            group by app_name) as p on p.app_name = games.name
+            order by ` + sortColumn + (asc ? ` asc ` : ` desc `) +
+            `limit $1 offset $2`, [pageSize, (page-1)*pageSize], (err, res) => {
                 if (err) reject(err);
                 if (res && res.rows) resolve(res.rows);
                 else reject(new Error("No results found"));
@@ -30,6 +31,27 @@ const getGames = async (body) => {
         console.log(err1);
     }
 };
+
+// te filtri buus jaapasso
+// search
+const getGameRowCount = async () => {
+    try {
+        return await new Promise(function (resolve, reject) { // rank queried based on global sales
+            client.query(`SELECT COUNT(*) FROM (
+            select id, RANK () OVER (ORDER BY global_sales DESC) as rank, name, platform, year, genre, publisher,
+            na_sales, eu_sales, jp_sales, other_sales, global_sales, COALESCE(p.review_count, 0) as review_count from games
+            left join (select app_name, count(*) as review_count from reviews
+            group by app_name) as p on p.app_name = games.name
+            order by rank asc) g`, (err, res) => {
+                if (err) reject(err);
+                if (res && res.rows) resolve(res.rows);
+                else reject(new Error("No results found"));
+            });
+        });
+    } catch (err1) {
+        console.log(err1);
+    }
+}
 
 const createGame = async (body) => {
     const { name, platform, year, genre, publisher, na_sales, eu_sales, jp_sales, other_sales } = body;
@@ -144,5 +166,6 @@ module.exports = {
     getReviews,
     createReview,
     updateReview,
-    deleteReview
+    deleteReview,
+    getGameRowCount
 };

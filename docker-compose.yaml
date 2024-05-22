@@ -12,7 +12,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    command: npm start
+    command: npm run dev
     # entrypoint: [ "node", "import.js" ]
   react:
     build: 
@@ -60,3 +60,4 @@ services:
       - pgadmin-data:/var/lib/pgadmin
 volumes:
   pgadmin-data:
+  pgdata:
