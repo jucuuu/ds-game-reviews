@@ -11,17 +11,21 @@ const client = new Client({
 client.connect();
 
 // !!! + jaapasso filtri+sorteri+pagination
-// page, pageSize, sortColumn, asc(1/0), search
-// filtret + sortot pec vairakiem parametriem
-const getGames = async (page, pageSize, sortColumn='rank', asc=true) => {
+// filtri: year/sales/review count intervaali; genre un publishers (select distinct un iebaazt kkaadaa menu);
+// platformas tapat? (partaisit lai atsevishkja tabula ir?); ranka intervals
+const getGames = async (page, pageSize, sortColumn='rank', asc='true', searchString='') => {
+    let ascSort;
+    (asc == 'false' ? ascSort = 'desc' : ascSort = 'asc')
     try {
         return await new Promise(function (resolve, reject) { // rank queried based on global sales
             client.query(`select id, RANK () OVER (ORDER BY global_sales DESC) as rank, name, platform, year, genre, publisher,
             na_sales, eu_sales, jp_sales, other_sales, global_sales, COALESCE(p.review_count, 0) as review_count from games
             left join (select app_name, count(*) as review_count from reviews
             group by app_name) as p on p.app_name = games.name
-            order by ` + sortColumn + (asc ? ` asc ` : ` desc `) +
-            `limit $1 offset $2`, [pageSize, (page-1)*pageSize], (err, res) => {
+            WHERE upper(name) like upper('%` + searchString + `%') or upper(platform) like upper('%` + searchString + `%')
+            or upper(genre) like upper('%` + searchString + `%') or upper(publisher) like upper('%` + searchString + `%')
+            order by ` + sortColumn + ` ` + ascSort +
+            ` limit $1 offset $2`, [pageSize, (page-1)*pageSize], (err, res) => {
                 if (err) reject(err);
                 if (res && res.rows) resolve(res.rows);
                 else reject(new Error("No results found"));
@@ -34,7 +38,7 @@ const getGames = async (page, pageSize, sortColumn='rank', asc=true) => {
 
 // te filtri buus jaapasso
 // search
-const getGameRowCount = async () => {
+const getGameRowCount = async (searchString='') => {
     try {
         return await new Promise(function (resolve, reject) { // rank queried based on global sales
             client.query(`SELECT COUNT(*) FROM (
@@ -42,6 +46,8 @@ const getGameRowCount = async () => {
             na_sales, eu_sales, jp_sales, other_sales, global_sales, COALESCE(p.review_count, 0) as review_count from games
             left join (select app_name, count(*) as review_count from reviews
             group by app_name) as p on p.app_name = games.name
+            WHERE upper(name) like upper('%` + searchString + `%') or upper(platform) like upper('%` + searchString + `%')
+            or upper(genre) like upper('%` + searchString + `%') or upper(publisher) like upper('%` + searchString + `%')
             order by rank asc) g`, (err, res) => {
                 if (err) reject(err);
                 if (res && res.rows) resolve(res.rows);
@@ -94,6 +100,11 @@ const updateGame = (id, body) => {
 
 const deleteGame = (id) => {
     return new Promise(function (resolve, reject) {
+        client.query(`DELETE FROM reviews WHERE app_id = $1`, [id],
+        (err, res) => {
+            if (err) reject(err);
+            resolve(`Reviews deleted of game with app_id: ${id}`);
+        });
         client.query(`DELETE FROM games WHERE id = $1`, [id],
         (err, res) => {
             if (err) reject(err);
@@ -104,10 +115,11 @@ const deleteGame = (id) => {
 
 // REVIEWS
 
+// + add pagination
 const getReviews = async (id) => {
     try {
         return await new Promise(function (resolve, reject) {
-            client.query(`select * from reviews where app_name like (SELECT name FROM games WHERE id like '${id}')`, (err, res) =>
+            client.query(`select * from reviews where app_id=$1`, [id], (err, res) =>
             {
                 if (err) reject(err);
                 if (res && res.rows) resolve(res.rows);
@@ -163,6 +175,7 @@ module.exports = {
     getGames,
     createGame,
     updateGame,
+    deleteGame,
     getReviews,
     createReview,
     updateReview,

@@ -1,30 +1,45 @@
-import React, { useState, useEffect } from "react";
-import { Card, Table, Statistic, Modal } from "antd";
+import React, {useState, useEffect} from 'react';
+import { Switch, Card, Table, Statistic, Typography, Button} from "antd";
+import { DislikeOutlined, LikeOutlined, CloseOutlined, EditOutlined } from '@ant-design/icons';
+import { Content } from "antd/es/layout/layout";
+const { Paragraph } = Typography;
 
-export const GameCard = (record, isopen) => {
-    // get reviews for the game
-    const [reviewData, setReviewData] = useState(null);
+function addReview(gameId) {
+    
+}
 
-    const getReviews = async () => {
-        const response = await fetch(`http://localhost:3000/games/${record.id}`);
-        const newData = await response.json();
-        setReviewData(newData);
-    };
+function deleteReview(gameId, revId) {
+    fetch(`http://localhost:3000/games/${gameId}/${revId}`, {
+      method: 'DELETE',
+    })
+}
 
-    useEffect(() => {
-        getReviews();
-    }, [record]);
+function editReview() {
 
-    // card visibility
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const showModal = () => {
-        setIsModalOpen(true);
-    };
-    const handleOk = () => {
-        setIsModalOpen(false);
-    };
+}
 
+// !! pagination mazajai tabulai
+export const GameCard = (game) => {
+    const [expanded, setExpanded] = useState(true);
+    <Switch
+        checked={expanded}
+        onChange={() => {
+          setExpanded((c) => !c);
+        }}
+      />
     const columns = [
+        {
+            title: 'App ID',
+            dataIndex: 'app_id',
+            key: 'app_id',
+            hidden: true
+        },
+        {
+            title: 'App name',
+            dataIndex: 'app_name',
+            key: 'app_name',
+            hidden: true
+        },
         {
             title: 'ID',
             dataIndex: 'id',
@@ -32,58 +47,95 @@ export const GameCard = (record, isopen) => {
             hidden: true
         },
         {
-            title: 'Review',
-            dataIndex: 'review',
-            key: 'review'
+            title: 'Score',
+            dataIndex: 'review_score',
+            key: 'review_score',
+            render: (record) => {
+                if (record == -1) return (<DislikeOutlined />)
+                else if (record == null) return (<div>:/</div>)
+                else return (<LikeOutlined/>);
+            }
         },
         {
-            title: 'Score',
-            dataIndex: 'score',
-            key: 'score'
+            title: 'Review',
+            dataIndex: 'review_text', // kkads 'read more...' pec kaut cik simb ja garsh revju
+            key: 'review_text',
+            render: (record) => {
+                return <Paragraph ellipsis={{
+                          rows: 3,
+                          expandable: 'collapsible',
+                          onExpand: (_, info) => setExpanded(info.expanded)}}>
+                            {record}
+                        </Paragraph>
+            }
         },
         {
             title: 'Review recommended by others',
-            dataIndex: 'recReview',
-            key: 'recReview'
+            dataIndex: 'review_votes',
+            key: 'review_votes',
+            render: (record) => { 
+                if (record == false) return (<DislikeOutlined />)
+                    else if (record == null) return (<div>:/</div>)
+                    else return (<LikeOutlined/>);
+            }
+        },
+        {
+            title: 'Edit',
+            dataIndex: 'edit',
+            key: 'edit',
+            render: (_, record) => (
+              <Button onClick={() => editReview(record.id)}><EditOutlined /></Button>
+            )
+        },
+        {
+            title: 'Delete',
+            dataIndex: 'delete',
+            key: 'delete',
+            render: (_, record) => (
+              <Button onClick={() => deleteReview(record.id)}><CloseOutlined /></Button>
+            )
         }
       ].filter(item => !item.hidden);
 
+    console.log(game['reviewData'])
     return (
-        <Modal cancelButtonProps={{ style: { display: 'none' } }}>
-            <Card title={record.name}>
+        <div>
+            <Card title={game["record"].name}>
                 <Card.Grid hoverable={false}>
-                    <Statistic title="Rank" value={record.rank}/>
+                    <Statistic title="Rank" value={game["record"].rank}/>
                 </Card.Grid>
                 <Card.Grid hoverable={false}>
-                    <Statistic title="Platform" value={record.platform}/>
+                    <Statistic title="Platform" value={game["record"].platform}/>
                 </Card.Grid>
                 <Card.Grid hoverable={false}>
-                    <Statistic title="Year" value={record.year}/>
+                    <Statistic title="Year" value={game["record"].year} groupSeparator=''/>
                 </Card.Grid>
                 <Card.Grid hoverable={false}>
-                    <Statistic title="Genre" value={record.genre}/>
+                    <Statistic title="Genre" value={game["record"].genre}/>
                 </Card.Grid>
                 <Card.Grid hoverable={false}>
-                    <Statistic title="Publisher" value={record.publisher}/>
+                    <Statistic title="Publisher" value={game["record"].publisher}/>
                 </Card.Grid>
                 <Card.Grid hoverable={false}>
-                    <Statistic title="NA sales" value={record.na_sales}/>
+                    <Statistic title="NA sales" value={game["record"].na_sales}/>
                 </Card.Grid>
                 <Card.Grid hoverable={false}>
-                    <Statistic title="EU sales" value={record.eu_sales}/>
+                    <Statistic title="EU sales" value={game["record"].eu_sales}/>
                 </Card.Grid>
                 <Card.Grid hoverable={false}>
-                    <Statistic title="JP sales" value={record.jp_sales}/>
+                    <Statistic title="JP sales" value={game["record"].jp_sales}/>
                 </Card.Grid>
                 <Card.Grid hoverable={false}>
-                    <Statistic title="Other sales" value={record.other_sales}/>
+                    <Statistic title="Other sales" value={game["record"].other_sales}/>
                 </Card.Grid>
                 <Card.Grid hoverable={false}>
-                    <Statistic title="Global sales" value={record.global_sales}/>
+                    <Statistic title="Global sales" value={game["record"].global_sales}/>
                 </Card.Grid>
-
-                <Table dataSource={reviewData} columns={columns}/>
             </Card>
-        </Modal>
+            <Content>
+            <Button>Add a review</Button>
+             {game['reviewData'].length > 0 ? <Table dataSource={game['reviewData']} columns={columns}/> : <h3>No reviews</h3>}
+            </Content>
+        </div>
     );
 }

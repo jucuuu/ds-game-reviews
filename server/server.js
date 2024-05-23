@@ -16,25 +16,20 @@ app.use(cors());
 app.use(express.json());
 
 // Game CRUD
-
-// app.get('/', async (req, res) => {
-//     data.getGames(req.params.page, req.params.pageSize).then(response => {
-//       res.status(200).send(response);
-//     }).catch(error => {
-//       res.status(500).send(error);
-//     })
-// });
-
-app.get('/:page&:pageSize&:sortColumn&:asc', async (req, res) => {
-  data.getGames(req.params.page, req.params.pageSize, req.params.sortColumn, req.params.asc).then(response => {
-    res.status(200).send(response);
-  }).catch(error => {
-    res.status(500).send(error);
-  })
-});
+app.get('/', (req, res) => {
+  // Access query parameters using req.query
+  const { page, pageSize, sortColumn, asc, searchString } = req.query;
+  // Log the query parameters
+  data.getGames(page, pageSize, sortColumn, asc, searchString).then(response => {
+        res.status(200).send(response);
+      }).catch(error => {
+        res.status(500).send(error);
+      })
+    });
 
 app.get('/total', async (req, res) => {
-  data.getGameRowCount().then(response => {
+  const { searchString } = req.query;
+  data.getGameRowCount(searchString).then(response => {
     res.status(200).send(response);
   }).catch(error => {
     res.status(500).send(error);
@@ -71,9 +66,39 @@ app.delete('/games/:id', (req, res) => {
 });
 
 // Review get
-
 app.get('/games/:id', async (req, res) => {
-  data.getReviews(req.params.name).then(response => {
+  const { page, pageSize } = req.query;
+  data.getReviews(req.params.id).then(response => {
+    res.status(200).send(response);
+  }).catch(error => {
+    res.status(500).send(error);
+  })
+});
+
+app.post('/games/:id', (req, res) => {
+  data.createReview(req.body)
+  .then(response => {
+    res.status(200).send(response);
+  }).catch(error => {
+    res.status(500).send(error);
+  })
+});
+
+app.put('/games/:id/:revId', (req, res) => {
+  const id = req.params.id;
+  const revId = req.params.revId;
+  const form = req.body;
+  data.updateReview(id, form)
+  .then(response => {
+    res.status(200).send(response);
+  }).catch(error => {
+    res.status(500).send(error);
+  })
+});
+
+app.delete('/games/:id/:revId', (req, res) => {
+  data.deleteReview(req.params.id, req.params.revId)
+  .then(response => {
     res.status(200).send(response);
   }).catch(error => {
     res.status(500).send(error);
