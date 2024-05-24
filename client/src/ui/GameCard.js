@@ -1,32 +1,147 @@
 import React, {useState, useEffect} from 'react';
-import { Switch, Card, Table, Statistic, Typography, Button} from "antd";
-import { DislikeOutlined, LikeOutlined, CloseOutlined, EditOutlined } from '@ant-design/icons';
-import { Content } from "antd/es/layout/layout";
+import { Switch, Card, Table, Statistic, Typography, Button, Layout, Modal, Form } from "antd";
+import { DislikeOutlined, LikeOutlined, CloseOutlined, EditOutlined, MinusOutlined } from '@ant-design/icons';
+import { Content, Header } from "antd/es/layout/layout";
+import { CreateReviewForm } from './CreateReviewForm'
+import { CreateGameForm } from './CreateGameForm'
+import { useParams, useNavigate } from 'react-router-dom';
 const { Paragraph } = Typography;
 
-function addReview(gameId) {
-    
-}
-
-function deleteReview(gameId, revId) {
-    fetch(`http://localhost:3000/games/${gameId}/${revId}`, {
-      method: 'DELETE',
-    })
-}
-
-function editReview() {
-
-}
-
 // !! pagination mazajai tabulai
-export const GameCard = (game) => {
+export const GameCard = () => {
+    let {gameId} = useParams();
+    
+    const [currentPage, setCurrentPage] = React.useState(1);
+    const [currentPageSize, setCurrentPageSize] = React.useState(10);
+    const [totalRows, setTotalRows] = React.useState(50);
+
+    const [game, setGame] = React.useState([{}]);
+    const [reviewData, setReviewData] = React.useState([]);    
+
+    // Get current game data
+    const getGame = async (gameId) => {
+        try {
+            const response = await fetch(`http://localhost:3000/${gameId}`, {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+              }
+            });
+            const newData = await response.json();
+            setGame(newData);
+        } catch (error) {
+            console.log('Error: ', error);
+        }
+    }
+
+    // Send updated game data to server
+    const handleGameFinish = async(values) => {
+
+    };
+
+    // Create review modal
+    const [form] = Form.useForm();
+    const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+    const showReviewModal = () => {
+        setIsReviewModalOpen(true);
+    };
+    const handleReviewCancel = () => {
+        setIsReviewModalOpen(false);
+    };
+
+    // Edit game modal
+    const [isGameModalOpen, setIsGameModalOpen] = useState(false);
+    const showGameModal = () => {
+        setIsGameModalOpen(true);
+    };
+    const handleGameCancel = () => {
+        setIsGameModalOpen(false);
+    };
+
+    // Edit review modal
+    const [isEditReviewModalOpen, setIsEditReviewModalOpen] = useState(false);
+    const showEditReviewModal = () => {
+        setIsEditReviewModalOpen(true);
+    };
+    const handleEditReviewCancel = () => {
+        setIsEditReviewModalOpen(false);
+    };
+
+    // Get all reviews for current game
+    const getReviews = async (gameId, page, pageSize) => {
+        const params = new URLSearchParams({
+            page: page,
+            pageSize: pageSize
+        });
+        fetch(`http://localhost:3000/games/${gameId}?${params}`)
+        .then(response => {
+          return response.json();
+        }).then(data => {
+          setReviewData(data);
+        })
+    }
+
+    // Get review count for current game
+    const getRowCount = async(gameId) => {
+        try {
+          fetch(`http://localhost:3000/totalRev/${gameId}`)
+              .then(response => {
+                return response.json();
+              })
+              .then(data => {
+                setTotalRows(data[0]["count"]);
+              });
+        } catch (error) {
+          console.log('Error: ', error);
+        }
+    }
+
+    // Send new review data to server
+    const handleReviewFinish = async (values) => {
+        setIsReviewModalOpen(false);
+        try {
+            const response = await fetch(`http://localhost:3000/games/${gameId}`, {
+                method: 'POST',
+                headers: {
+                'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(values),
+            });
+            const data = await response.json();
+            getReviews(gameId, currentPage, currentPageSize)
+        } catch (error) {
+            console.error('Error: ', error);
+        }
+    };
+
+    // Send updated review data to server
+    const handleEditReviewFinish = async(values) => {
+
+    };
+
+    // Send delete request to server
+    function deleteReview(revId) {
+        try {
+            fetch(`http://localhost:3000/games/${gameId}/${revId}`, {
+                method: 'DELETE',
+            })
+            .then(() => {
+                getReviews(gameId, currentPage, currentPageSize);
+            })
+        } catch (err) {
+            console.log('ups')
+        }
+    }
+
+    // Expand/collapse long reviews
     const [expanded, setExpanded] = useState(true);
     <Switch
         checked={expanded}
         onChange={() => {
           setExpanded((c) => !c);
         }}
-      />
+    />
+
     const columns = [
         {
             title: 'App ID',
@@ -52,7 +167,6 @@ export const GameCard = (game) => {
             key: 'review_score',
             render: (record) => {
                 if (record == -1) return (<DislikeOutlined />)
-                else if (record == null) return (<div>:/</div>)
                 else return (<LikeOutlined/>);
             }
         },
@@ -74,9 +188,8 @@ export const GameCard = (game) => {
             dataIndex: 'review_votes',
             key: 'review_votes',
             render: (record) => { 
-                if (record == false) return (<DislikeOutlined />)
-                    else if (record == null) return (<div>:/</div>)
-                    else return (<LikeOutlined/>);
+                if (record == 0) return (<MinusOutlined/>)
+                else return (<LikeOutlined/>);
             }
         },
         {
@@ -84,7 +197,7 @@ export const GameCard = (game) => {
             dataIndex: 'edit',
             key: 'edit',
             render: (_, record) => (
-              <Button onClick={() => editReview(record.id)}><EditOutlined /></Button>
+              <Button onClick={() => showEditReviewModal()}><EditOutlined /></Button>
             )
         },
         {
@@ -97,45 +210,91 @@ export const GameCard = (game) => {
         }
       ].filter(item => !item.hidden);
 
-    console.log(game['reviewData'])
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        getRowCount(gameId);
+        getGame(gameId);
+        getReviews(gameId, currentPage, currentPageSize);
+    }, [currentPage, currentPageSize]);    
+    
     return (
-        <div>
-            <Card title={game["record"].name}>
-                <Card.Grid hoverable={false}>
-                    <Statistic title="Rank" value={game["record"].rank}/>
-                </Card.Grid>
-                <Card.Grid hoverable={false}>
-                    <Statistic title="Platform" value={game["record"].platform}/>
-                </Card.Grid>
-                <Card.Grid hoverable={false}>
-                    <Statistic title="Year" value={game["record"].year} groupSeparator=''/>
-                </Card.Grid>
-                <Card.Grid hoverable={false}>
-                    <Statistic title="Genre" value={game["record"].genre}/>
-                </Card.Grid>
-                <Card.Grid hoverable={false}>
-                    <Statistic title="Publisher" value={game["record"].publisher}/>
-                </Card.Grid>
-                <Card.Grid hoverable={false}>
-                    <Statistic title="NA sales" value={game["record"].na_sales}/>
-                </Card.Grid>
-                <Card.Grid hoverable={false}>
-                    <Statistic title="EU sales" value={game["record"].eu_sales}/>
-                </Card.Grid>
-                <Card.Grid hoverable={false}>
-                    <Statistic title="JP sales" value={game["record"].jp_sales}/>
-                </Card.Grid>
-                <Card.Grid hoverable={false}>
-                    <Statistic title="Other sales" value={game["record"].other_sales}/>
-                </Card.Grid>
-                <Card.Grid hoverable={false}>
-                    <Statistic title="Global sales" value={game["record"].global_sales}/>
-                </Card.Grid>
-            </Card>
-            <Content>
-            <Button>Add a review</Button>
-             {game['reviewData'].length > 0 ? <Table dataSource={game['reviewData']} columns={columns}/> : <h3>No reviews</h3>}
-            </Content>
+        <div className="App">
+            <Layout>
+                <Header style={{ background: 'white', display: 'flex', alignItems: 'center'}}>
+                    <Button onClick={() => navigate("/")}>Back</Button>
+                    <Button onClick={showGameModal}>Edit game data</Button>
+                </Header>
+                <Card title={game[0]["name"]}>
+                    <Card.Grid hoverable={false}>
+                        <Statistic title="Rank" value={game[0]["rank"]}/>
+                    </Card.Grid>
+                    <Card.Grid hoverable={false}>
+                        <Statistic title="Platform" value={game[0]["platform"]}/>
+                    </Card.Grid>
+                    <Card.Grid hoverable={false}>
+                        <Statistic title="Year" value={game[0]["year"]} groupSeparator=''/>
+                    </Card.Grid>
+                    <Card.Grid hoverable={false}>
+                        <Statistic title="Genre" value={game[0]["genre"]}/>
+                    </Card.Grid>
+                    <Card.Grid hoverable={false}>
+                        <Statistic title="Publisher" value={game[0]["publisher"]}/>
+                    </Card.Grid>
+                    <Card.Grid hoverable={false}>
+                        <Statistic title="NA sales" value={game[0]["na_sales"]}/>
+                    </Card.Grid>
+                    <Card.Grid hoverable={false}>
+                        <Statistic title="EU sales" value={game[0]["eu_sales"]}/>
+                    </Card.Grid>
+                    <Card.Grid hoverable={false}>
+                        <Statistic title="JP sales" value={game[0]["jp_sales"]}/>
+                    </Card.Grid>
+                    <Card.Grid hoverable={false}>
+                        <Statistic title="Other sales" value={game[0]["other_sales"]}/>
+                    </Card.Grid>
+                    <Card.Grid hoverable={false}>
+                        <Statistic title="Global sales" value={game[0]["global_sales"]}/>
+                    </Card.Grid>
+                </Card>
+
+                <Content>
+                    <Button onClick={showReviewModal}>Add a review</Button>
+                    {reviewData.length > 0 ? <Table dataSource={reviewData} columns={columns} pagination={{total:totalRows, showSizeChanger:true, onChange: (page, pageSize) => {
+                        setCurrentPage(page);
+                        setCurrentPageSize(pageSize);
+                    }}}/> : <h3>No reviews</h3>}
+                </Content>
+                
+                {/* Create review modal */}
+                <Modal title={`Review ${game[0]["name"]}`} open={isReviewModalOpen} onCancel={handleReviewCancel} okButtonProps={{ style: { display: 'none' } }} footer={[
+                    <Button form="form" key="submit" htmlType="submit" type="primary" onClick={() => form.submit()}>
+                        Submit
+                    </Button>
+                ]}>
+                    <CreateReviewForm form={form} onFinish={handleReviewFinish}/>
+                </Modal>
+
+                {/* Edit review modal */}
+                <Modal title={`Edit ${game[0]["name"]} review`} open={isEditReviewModalOpen} onCancel={handleEditReviewCancel} okButtonProps={{ style: { display: 'none' } }} footer={[
+                    <Button form="form" key="submit" htmlType="submit" type="primary" onClick={() => form.submit()}>
+                        Submit
+                    </Button>
+                ]}>
+                    {/* Kkaa japadod vecaas values un janodod f-jai lai updateo */}
+                    <CreateReviewForm form={form} onFinish={handleReviewFinish}/>
+                </Modal>
+
+                {/* Edit game info modal */}
+                <Modal title={`Edit ${game[0]["name"]}`} open={isGameModalOpen} onCancel={handleGameCancel} okButtonProps={{ style: { display: 'none' } }} footer={[
+                    <Button form="form" key="submit" htmlType="submit" type="primary" onClick={() => form.submit()}>
+                        Submit
+                    </Button>
+                ]}>
+                    {/* Kkaa japadod vecaas values un janodod f-jai lai updateo */}
+                    <CreateGameForm form={form} onFinish={handleGameFinish}/>
+                </Modal>
+            </Layout>
         </div>
     );
 }

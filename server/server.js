@@ -18,9 +18,9 @@ app.use(express.json());
 // Game CRUD
 app.get('/', (req, res) => {
   // Access query parameters using req.query
-  const { page, pageSize, sortColumn, asc, searchString } = req.query;
+  const { page, pageSize, sortColumn, asc, searchString, selectedGenres } = req.query;
   // Log the query parameters
-  data.getGames(page, pageSize, sortColumn, asc, searchString).then(response => {
+  data.getGames(page, pageSize, sortColumn, asc, searchString, selectedGenres ).then(response => {
         res.status(200).send(response);
       }).catch(error => {
         res.status(500).send(error);
@@ -65,19 +65,58 @@ app.delete('/games/:id', (req, res) => {
   })
 });
 
-// Review get
-app.get('/games/:id', async (req, res) => {
-  const { page, pageSize } = req.query;
-  data.getReviews(req.params.id).then(response => {
+// get genres
+app.get('/genres', (req, res) => {
+  data.getGenres()
+  .then(response => {
+    res.status(200).send(response);
+  }).catch(error => {
+    res.status(500).send(error);
+  })
+})
+
+// get publishers
+app.get('/publishers', (req, res) => {
+  data.getPublishers()
+  .then(response => {
+    res.status(200).send(response);
+  }).catch(error => {
+    res.status(500).send(error);
+  })
+})
+
+// get specific game data
+app.get('/:id', (req, res) => {
+  data.getGame(req.params.id)
+  .then(response => {
+    res.status(200).send(response);
+  }).catch(error => {
+    res.status(500).send(error);
+  })
+})
+
+// Review CRUD
+app.post('/games/:id', (req, res) => {
+  data.createReview(req.params.id, req.body)
+  .then(response => {
     res.status(200).send(response);
   }).catch(error => {
     res.status(500).send(error);
   })
 });
 
-app.post('/games/:id', (req, res) => {
-  data.createReview(req.body)
-  .then(response => {
+app.get('/games/:gameId', async (req, res) => {
+  const { page, pageSize } = req.query;
+  data.getReviews(req.params.gameId, page, pageSize).then(response => {
+    res.status(200).send(response);
+  }).catch(error => {
+    res.status(500).send(error);
+  })
+});
+
+// total review row count
+app.get('/totalRev/:id', async (req, res) => {
+  data.totalReviewRows(req.params.id).then(response => {
     res.status(200).send(response);
   }).catch(error => {
     res.status(500).send(error);
@@ -88,7 +127,7 @@ app.put('/games/:id/:revId', (req, res) => {
   const id = req.params.id;
   const revId = req.params.revId;
   const form = req.body;
-  data.updateReview(id, form)
+  data.updateReview(id, req.body)
   .then(response => {
     res.status(200).send(response);
   }).catch(error => {
@@ -96,8 +135,8 @@ app.put('/games/:id/:revId', (req, res) => {
   })
 });
 
-app.delete('/games/:id/:revId', (req, res) => {
-  data.deleteReview(req.params.id, req.params.revId)
+app.delete('/games/:gameId/:revId', (req, res) => {
+  data.deleteReview(req.params.revId)
   .then(response => {
     res.status(200).send(response);
   }).catch(error => {

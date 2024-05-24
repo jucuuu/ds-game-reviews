@@ -11,20 +11,29 @@ const client = new Client({
 client.connect();
 
 // !!! + jaapasso filtri+sorteri+pagination
-// filtri: year/sales/review count intervaali; genre un publishers (select distinct un iebaazt kkaadaa menu);
-// platformas tapat? (partaisit lai atsevishkja tabula ir?); ranka intervals
-const getGames = async (page, pageSize, sortColumn='rank', asc='true', searchString='') => {
+
+// filtri: ranku/year/sales/review count intervaali; genres un publishers (select distinct un iebaazt kkaadaa select menu);
+// platformas tapat? (partaisit lai atsevishkja tabula ir?)
+const getGames = async (page, pageSize, sortColumn='rank', asc='true', searchString='', selectedGenres) => {
     let ascSort;
+    let genreQuery = '';
+    selectedGenres = selectedGenres.split(",")
+    console.log(!selectedGenres[0])
+    if (selectedGenres[0]) {
+        genreQuery = ' AND genre in (\'' + selectedGenres.join("', '") + '\')';
+        console.log(genreQuery)
+    }
     (asc == 'false' ? ascSort = 'desc' : ascSort = 'asc')
     try {
         return await new Promise(function (resolve, reject) { // rank queried based on global sales
             client.query(`select id, RANK () OVER (ORDER BY global_sales DESC) as rank, name, platform, year, genre, publisher,
             na_sales, eu_sales, jp_sales, other_sales, global_sales, COALESCE(p.review_count, 0) as review_count from games
-            left join (select app_name, count(*) as review_count from reviews
-            group by app_name) as p on p.app_name = games.name
-            WHERE upper(name) like upper('%` + searchString + `%') or upper(platform) like upper('%` + searchString + `%')
-            or upper(genre) like upper('%` + searchString + `%') or upper(publisher) like upper('%` + searchString + `%')
-            order by ` + sortColumn + ` ` + ascSort +
+            left join (select app_id, count(*) as review_count from reviews
+            group by app_id) as p on p.app_id = games.id
+            WHERE (upper(name) like upper('%` + searchString + `%') or upper(platform) like upper('%` + searchString + `%')
+            or upper(genre) like upper('%` + searchString + `%') or upper(publisher) like upper('%` + searchString + `%')) ` +
+            genreQuery +
+            ` order by ` + sortColumn + ` ` + ascSort +
             ` limit $1 offset $2`, [pageSize, (page-1)*pageSize], (err, res) => {
                 if (err) reject(err);
                 if (res && res.rows) resolve(res.rows);
@@ -35,6 +44,55 @@ const getGames = async (page, pageSize, sortColumn='rank', asc='true', searchStr
         console.log(err1);
     }
 };
+
+// specific game data
+const getGame = async(id) => {
+    try {
+        return await new Promise(function (resolve, reject) { // rank queried based on global sales
+            client.query(`select id, (select rank from (select id, RANK () OVER (ORDER BY global_sales DESC) rank from games) where id=$1),
+            name, platform, year, genre, publisher, na_sales, eu_sales, jp_sales, other_sales, global_sales from games
+            where id = $1`, [id], (err, res) => {
+                if (err) reject(err);
+                if (res && res.rows) resolve(res.rows);
+                else reject(new Error("No results found"));
+            });
+        });
+    } catch (err1) {
+        console.log(err1);
+    }
+}
+
+// distinct genres
+const getGenres = async () => {
+    try {
+        return await new Promise(function (resolve, reject) {
+            client.query(`select distinct genre from games
+            order by genre asc`, (err, res) => {
+                if (err) reject(err);
+                if (res && res.rows) resolve(res.rows);
+                else reject(new Error("No results found"));
+            });
+        });
+    } catch (err1) {
+        console.log(err1);
+    }
+}
+
+// distinct publishers
+const getPublishers = async() => {
+    try {
+        return await new Promise(function (resolve, reject) {
+            client.query(`select distinct publisher from games
+            order by publisher asc`, (err, res) => {
+                if (err) reject(err);
+                if (res && res.rows) resolve(res.rows);
+                else reject(new Error("No results found"));
+            });
+        });
+    } catch (err1) {
+        console.log(err1);
+    }
+}
 
 // te filtri buus jaapasso
 // search
@@ -114,12 +172,13 @@ const deleteGame = (id) => {
 };
 
 // REVIEWS
-
 // + add pagination
-const getReviews = async (id) => {
+const getReviews = async (id, page=1, pageSize=10) => {
     try {
         return await new Promise(function (resolve, reject) {
-            client.query(`select * from reviews where app_id=$1`, [id], (err, res) =>
+            client.query(`select * from reviews where app_id=$1
+            order by id desc
+            limit $2 offset $3`, [id, pageSize, pageSize*(page-1)], (err, res) =>
             {
                 if (err) reject(err);
                 if (res && res.rows) resolve(res.rows);
@@ -131,11 +190,26 @@ const getReviews = async (id) => {
     }
 };
 
-const createReview = (body) => {
+const totalReviewRows = async(id) => {
+    try {
+        return await new Promise(function (resolve, reject) {
+            client.query(`select count(*) count from reviews where app_id=$1`, [id], (err, res) =>
+            {
+                if (err) reject(err);
+                if (res && res.rows) resolve(res.rows);
+                else reject(new Error("No results"));
+            });
+        });
+    } catch (err1) {
+        console.log(err1);
+    }
+}
+
+const createReview = (gameId, body) => {
     return new Promise(function (resolve, reject) {
-        const { app_id, app_name, review_text, review_score } = body;
-        client.query(`INSERT INTO reviews VALUES ($1, $2, $3, $4, 0) RETURNING *`,
-        [app_id, app_name, review_text, review_score],
+        const { review_score, review_text, review_votes } = body;
+        client.query(`INSERT INTO reviews(app_id, review_score, review_text, review_votes) VALUES ($1, $2, $3, $4) RETURNING *`,
+        [gameId, review_score, review_text, review_votes],
         (err, res) => {
             if (err) reject(err);
             if (res && res.rows) resolve(res.rows);
@@ -144,12 +218,11 @@ const createReview = (body) => {
     });
 };
 
-const updateReview = (id, body) => {
+const updateReview = (id, review_score, review_text, review_votes) => {
     return new Promise(function (resolve, reject) {
-        const { review_text, review_score } = body;
         client.query(`
-            UPDATE reviews SET review_text = $1, review_score = $2 WHERE id = $3 RETURNING *`,
-        [review_text, review_score, id],
+            UPDATE reviews SET review_text = $1, review_score = $2, review_voted = $3 WHERE id = $3 RETURNING *`,
+        [review_text, review_score, review_votes, id],
         (err, res) => {
             if (err) reject(err);
             if (res && res.rows) {
@@ -180,5 +253,9 @@ module.exports = {
     createReview,
     updateReview,
     deleteReview,
-    getGameRowCount
+    getGameRowCount,
+    getGenres,
+    getPublishers,
+    getGame,
+    totalReviewRows
 };
