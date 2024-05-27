@@ -18,9 +18,13 @@ app.use(express.json());
 // Game CRUD
 app.get('/', (req, res) => {
   // Access query parameters using req.query
-  const { page, pageSize, sortColumn, asc, searchString, selectedGenres } = req.query;
+  const { page, pageSize, sortColumn, asc, searchString, selectedGenres, selectedPublishers, yearFrom, yearTo,
+    naSalesFrom, naSalesTo, euSalesFrom, euSalesTo, jpSalesFrom, jpSalesTo,
+  otherSalesFrom, otherSalesTo, globalSalesFrom, globalSalesTo, reviewCountFrom, reviewCountTo
+   } = req.query;
   // Log the query parameters
-  data.getGames(page, pageSize, sortColumn, asc, searchString, selectedGenres ).then(response => {
+  data.getGames(page, pageSize, sortColumn, asc, searchString, selectedGenres, selectedPublishers, yearFrom, yearTo, naSalesFrom, naSalesTo, euSalesFrom, euSalesTo, jpSalesFrom, jpSalesTo,
+    otherSalesFrom, otherSalesTo, globalSalesFrom, globalSalesTo, reviewCountFrom, reviewCountTo ).then(response => {
         res.status(200).send(response);
       }).catch(error => {
         res.status(500).send(error);
@@ -123,11 +127,9 @@ app.get('/totalRev/:id', async (req, res) => {
   })
 });
 
+// upd review
 app.put('/games/:id/:revId', (req, res) => {
-  const id = req.params.id;
-  const revId = req.params.revId;
-  const form = req.body;
-  data.updateReview(id, req.body)
+  data.updateReview(req.body)
   .then(response => {
     res.status(200).send(response);
   }).catch(error => {
@@ -135,6 +137,7 @@ app.put('/games/:id/:revId', (req, res) => {
   })
 });
 
+// del review
 app.delete('/games/:gameId/:revId', (req, res) => {
   data.deleteReview(req.params.revId)
   .then(response => {

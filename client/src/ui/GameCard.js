@@ -4,22 +4,25 @@ import { DislikeOutlined, LikeOutlined, CloseOutlined, EditOutlined, MinusOutlin
 import { Content, Header } from "antd/es/layout/layout";
 import { CreateReviewForm } from './CreateReviewForm'
 import { CreateGameForm } from './CreateGameForm'
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 const { Paragraph } = Typography;
 
 // !! pagination mazajai tabulai
 export const GameCard = () => {
-    let {gameId} = useParams();
+    const {gameId} = useParams();
+    const { state: { from } } = useLocation();
     
     const [currentPage, setCurrentPage] = React.useState(1);
     const [currentPageSize, setCurrentPageSize] = React.useState(10);
     const [totalRows, setTotalRows] = React.useState(50);
 
     const [game, setGame] = React.useState([{}]);
-    const [reviewData, setReviewData] = React.useState([]);    
+    const [reviewData, setReviewData] = React.useState([]);
+
+    const [editingReviewData, setEditingReviewData] = React.useState([]);
 
     // Get current game data
-    const getGame = async (gameId) => {
+    const getGame = async () => {
         try {
             const response = await fetch(`http://localhost:3000/${gameId}`, {
               method: 'GET',
@@ -36,7 +39,21 @@ export const GameCard = () => {
 
     // Send updated game data to server
     const handleGameFinish = async(values) => {
-
+        setIsGameModalOpen(false);
+        console.log(values)
+        fetch(`http://localhost:3000/games/${gameId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(values),
+        })
+        .then(response => {
+            return response.json();
+          })
+          .then(data => {
+            setEditingReviewData([]);
+          });
     };
 
     // Create review modal
@@ -64,14 +81,15 @@ export const GameCard = () => {
         setIsEditReviewModalOpen(true);
     };
     const handleEditReviewCancel = () => {
+        setEditingReviewData([]);
         setIsEditReviewModalOpen(false);
     };
 
     // Get all reviews for current game
-    const getReviews = async (gameId, page, pageSize) => {
+    const getReviews = async () => {
         const params = new URLSearchParams({
-            page: page,
-            pageSize: pageSize
+            page: currentPage,
+            pageSize: currentPageSize
         });
         fetch(`http://localhost:3000/games/${gameId}?${params}`)
         .then(response => {
@@ -82,7 +100,7 @@ export const GameCard = () => {
     }
 
     // Get review count for current game
-    const getRowCount = async(gameId) => {
+    const getRowCount = async() => {
         try {
           fetch(`http://localhost:3000/totalRev/${gameId}`)
               .then(response => {
@@ -108,7 +126,7 @@ export const GameCard = () => {
                 body: JSON.stringify(values),
             });
             const data = await response.json();
-            getReviews(gameId, currentPage, currentPageSize)
+            getReviews()
         } catch (error) {
             console.error('Error: ', error);
         }
@@ -116,7 +134,21 @@ export const GameCard = () => {
 
     // Send updated review data to server
     const handleEditReviewFinish = async(values) => {
-
+        setIsEditReviewModalOpen(false);
+        values["id"] = editingReviewData[0];
+        fetch(`http://localhost:3000/games/${gameId}/${editingReviewData[0]}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(values),
+        })
+        .then(response => {
+            return response.json();
+          })
+          .then(data => {
+            setEditingReviewData([]);
+          });
     };
 
     // Send delete request to server
@@ -126,7 +158,7 @@ export const GameCard = () => {
                 method: 'DELETE',
             })
             .then(() => {
-                getReviews(gameId, currentPage, currentPageSize);
+                getReviews();
             })
         } catch (err) {
             console.log('ups')
@@ -197,7 +229,10 @@ export const GameCard = () => {
             dataIndex: 'edit',
             key: 'edit',
             render: (_, record) => (
-              <Button onClick={() => showEditReviewModal()}><EditOutlined /></Button>
+              <Button onClick={() => {
+                setEditingReviewData([record.id, record.app_id, record.app_name, record.review_score, record.review_text, record.review_votes]);
+                showEditReviewModal();
+              }}><EditOutlined /></Button>
             )
         },
         {
@@ -213,16 +248,16 @@ export const GameCard = () => {
     const navigate = useNavigate();
 
     useEffect(() => {
-        getRowCount(gameId);
-        getGame(gameId);
-        getReviews(gameId, currentPage, currentPageSize);
-    }, [currentPage, currentPageSize]);    
+        getRowCount();
+        getGame();
+        getReviews();
+    }, [currentPage, currentPageSize, editingReviewData]);    
     
     return (
         <div className="App">
             <Layout>
                 <Header style={{ background: 'white', display: 'flex', alignItems: 'center'}}>
-                    <Button onClick={() => navigate("/")}>Back</Button>
+                    <Button onClick={() => navigate(from)}>Back</Button>
                     <Button onClick={showGameModal}>Edit game data</Button>
                 </Header>
                 <Card title={game[0]["name"]}>
@@ -253,13 +288,16 @@ export const GameCard = () => {
                     <Card.Grid hoverable={false}>
                         <Statistic title="Other sales" value={game[0]["other_sales"]}/>
                     </Card.Grid>
+                    <Card.Grid></Card.Grid>
                     <Card.Grid hoverable={false}>
                         <Statistic title="Global sales" value={game[0]["global_sales"]}/>
                     </Card.Grid>
                 </Card>
 
                 <Content>
-                    <Button onClick={showReviewModal}>Add a review</Button>
+                    <Button onClick={() => {
+                        showReviewModal();
+                    }}>Add a review</Button>
                     {reviewData.length > 0 ? <Table dataSource={reviewData} columns={columns} pagination={{total:totalRows, showSizeChanger:true, onChange: (page, pageSize) => {
                         setCurrentPage(page);
                         setCurrentPageSize(pageSize);
@@ -275,14 +313,15 @@ export const GameCard = () => {
                     <CreateReviewForm form={form} onFinish={handleReviewFinish}/>
                 </Modal>
 
+                {/* INITIAL VALUES PALIEK PIE CREATE REVIEW FORM */}
                 {/* Edit review modal */}
                 <Modal title={`Edit ${game[0]["name"]} review`} open={isEditReviewModalOpen} onCancel={handleEditReviewCancel} okButtonProps={{ style: { display: 'none' } }} footer={[
                     <Button form="form" key="submit" htmlType="submit" type="primary" onClick={() => form.submit()}>
                         Submit
                     </Button>
                 ]}>
-                    {/* Kkaa japadod vecaas values un janodod f-jai lai updateo */}
-                    <CreateReviewForm form={form} onFinish={handleReviewFinish}/>
+
+                    <CreateReviewForm form={form} onFinish={handleEditReviewFinish} initialValues={editingReviewData}/>
                 </Modal>
 
                 {/* Edit game info modal */}
@@ -291,8 +330,8 @@ export const GameCard = () => {
                         Submit
                     </Button>
                 ]}>
-                    {/* Kkaa japadod vecaas values un janodod f-jai lai updateo */}
-                    <CreateGameForm form={form} onFinish={handleGameFinish}/>
+
+                    <CreateGameForm form={form} onFinish={handleGameFinish} initialValues={game}/>
                 </Modal>
             </Layout>
         </div>
